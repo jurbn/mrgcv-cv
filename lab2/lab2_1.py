@@ -47,15 +47,15 @@ def svd_triangulation(p1_matrix: np.matrix, p2_matrix: np.matrix, x1_data: np.ma
         point2 = np.append(x2_data[:, i], 1)
         # now we calculate the 3D position of the point using SVD
         ## calculate the equation system
-        ec = np.empty([4, 4])
+        equation = np.empty([4, 4])
         # for each row of the equation system (equation on page 6 lecture 6)
         for j in range(4):
-            ec[j, 0] = p1_matrix[2, j] * point1[0] - p1_matrix[0, j]
-            ec[j, 1] = p1_matrix[2, j] * point1[1] - p1_matrix[1, j]
-            ec[j, 2] = p2_matrix[2, j] * point2[0] - p2_matrix[0, j]
-            ec[j, 3] = p2_matrix[2, j] * point2[1] - p2_matrix[1, j]
+            equation[j, 0] = p1_matrix[2, j] * point1[0] - p1_matrix[0, j]
+            equation[j, 1] = p1_matrix[2, j] * point1[1] - p1_matrix[1, j]
+            equation[j, 2] = p2_matrix[2, j] * point2[0] - p2_matrix[0, j]
+            equation[j, 3] = p2_matrix[2, j] * point2[1] - p2_matrix[1, j]
         ## obtain the 3d point using svd to solve the system
-        u, s, vh = np.linalg.svd(ec.T)
+        _, _, vh = np.linalg.svd(equation.T)    # u, s, vh are the three matrices of the svd, we only need vh
         # the 3D point is the last column of vh
         point_3d = vh[-1]
         # now we normalize the point
@@ -115,5 +115,5 @@ if __name__ == "__main__":
     plotData.drawRefSystem(ax, T_w_c1, '-', 'C1')
     plotData.drawRefSystem(ax, T_w_c2, '-', 'C2')
     ax.scatter(X[0, :], X[1, :], X[2, :], marker='.')
-    plotData.plotNumbered3DPoints(ax, X, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+    plotData.plotNumbered3DPoints(ax, X, 'r', (0.1, 0.1, 0.1))
     plt.show()
