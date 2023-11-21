@@ -124,15 +124,15 @@ if __name__ == '__main__':
 
 
     # Load ground truth
-    T_wc1 = np.loadtxt('T_w_c1.txt')
-    T_wc2 = np.loadtxt('T_w_c2.txt')
-    T_wc3 = np.loadtxt('T_w_c3.txt')
-    K_c = np.loadtxt('K_c.txt')
-    X_w = np.loadtxt('X_w.txt')
+    T_wc1 = np.loadtxt('lab4/T_w_c1.txt')
+    T_wc2 = np.loadtxt('lab4/T_w_c2.txt')
+    T_wc3 = np.loadtxt('lab4/T_w_c3.txt')
+    K_c = np.loadtxt('lab4/K_c.txt')
+    X_w = np.loadtxt('lab4/X_w.txt')
 
-    x1Data = np.loadtxt('x1Data.txt')
-    x2Data = np.loadtxt('x2Data.txt')
-    x3Data = np.loadtxt('x3Data.txt')
+    x1Data = np.loadtxt('lab4/x1Data.txt')
+    x2Data = np.loadtxt('lab4/x2Data.txt')
+    x3Data = np.loadtxt('lab4/x3Data.txt')
 
 
     #Plot the 3D cameras and the 3D points
@@ -161,9 +161,9 @@ if __name__ == '__main__':
 
 
     #Read the images
-    path_image_1 = 'image1.png'
-    path_image_2 = 'image2.png'
-    path_image_3 = 'image3.png'
+    path_image_1 = 'lab4/image1.png'
+    path_image_2 = 'lab4/image2.png'
+    path_image_3 = 'lab4/image3.png'
     image_pers_1 = cv2.imread(path_image_1)
     image_pers_2 = cv2.imread(path_image_2)
     image_pers_3 = cv2.imread(path_image_3)

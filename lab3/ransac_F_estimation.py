@@ -246,43 +246,43 @@ if __name__ == "__main__":
     matches = matches_dict['matches']
     match_confidence = matches_dict['match_confidence']
 
-    RANSAC_inlier_ratio = 0.5
+    RANSAC_inlier_ratio = 0.4
     RANSAC_confidence = 0.999
-    RANSAC_pixel_threshold = 0.5
+    RANSAC_pixel_threshold = 2
 
     # SUPERGLUE
     # Get the match pairs and remove the -1
-    match_pairs = np.empty([len(matches)], dtype=object)
-    for i in range(len(matches)):
-        if matches[i] == -1:
-            match_pairs[i] = None
-        else:
-            match_pairs[i] = [keypoints_0[i], keypoints_1[matches[i]]]
+    # match_pairs = np.empty([len(matches)], dtype=object)
+    # for i in range(len(matches)):
+    #     if matches[i] == -1:
+    #         match_pairs[i] = None
+    #     else:
+    #         match_pairs[i] = [keypoints_0[i], keypoints_1[matches[i]]]
 
-    match_pairs = [np.array(match_pairs[i]) for i in range(len(match_pairs)) if match_pairs[i] is not None]
-    F = compute_f_ransac(image_1, image_2, match_pairs, RANSAC_pixel_threshold, RANSAC_confidence, RANSAC_inlier_ratio)
+    # match_pairs = [np.array(match_pairs[i]) for i in range(len(match_pairs)) if match_pairs[i] is not None]
+    # F = compute_f_ransac(image_1, image_2, match_pairs, RANSAC_pixel_threshold, RANSAC_confidence, RANSAC_inlier_ratio)
     
-    #SIFT
-    # sift = cv.SIFT_create(nfeatures=0, nOctaveLayers=5, contrastThreshold=0.02, edgeThreshold=20, sigma=0.5)
-    # keypoints_sift_1, descriptors_1 = sift.detectAndCompute(image_1, None)
-    # keypoints_sift_2, descriptors_2 = sift.detectAndCompute(image_2, None)
+    # SIFT
+    sift = cv.SIFT_create(nfeatures=0, nOctaveLayers=5, contrastThreshold=0.02, edgeThreshold=20, sigma=0.5)
+    keypoints_sift_1, descriptors_1 = sift.detectAndCompute(image_1, None)
+    keypoints_sift_2, descriptors_2 = sift.detectAndCompute(image_2, None)
 
-    # dist_ratio = 0.9
-    # min_dist = 500
-    # matches_list = match_with_2nd_rr(descriptors_1, descriptors_2, dist_ratio, min_dist)
-    # d_matches_list = index_matrix_to_matches_list(matches_list)
-    # d_matches_list = sorted(d_matches_list, key=lambda x: x.distance)
+    dist_ratio = 0.9
+    min_dist = 500
+    matches_list = match_with_2nd_rr(descriptors_1, descriptors_2, dist_ratio, min_dist)
+    d_matches_list = index_matrix_to_matches_list(matches_list)
+    d_matches_list = sorted(d_matches_list, key=lambda x: x.distance)
 
-    # # Conversion from DMatches to Python list
-    # matches_list = matches_list_to_index_matrix(d_matches_list)
+    # Conversion from DMatches to Python list
+    matches_list = matches_list_to_index_matrix(d_matches_list)
 
-    # # Matched points in numpy from list of DMatches
-    # src_pts = np.float32([keypoints_sift_1[m.queryIdx].pt for m in d_matches_list]).reshape(len(d_matches_list), 2)
-    # dst_pts = np.float32([keypoints_sift_2[m.trainIdx].pt for m in d_matches_list]).reshape(len(d_matches_list), 2)
+    # Matched points in numpy from list of DMatches
+    src_pts = np.float32([keypoints_sift_1[m.queryIdx].pt for m in d_matches_list]).reshape(len(d_matches_list), 2)
+    dst_pts = np.float32([keypoints_sift_2[m.trainIdx].pt for m in d_matches_list]).reshape(len(d_matches_list), 2)
 
-    # # Make the list of match pairs 
-    # match_pairs_sift = np.empty([len(matches_list)], dtype=object)
+    # Make the list of match pairs 
+    match_pairs_sift = np.empty([len(matches_list)], dtype=object)
 
-    # for i in range(len(matches_list)):
-    #     match_pairs_sift[i] = [src_pts[i], dst_pts[i]]
-    # F = compute_f_ransac(image_1, image_2, match_pairs_sift, RANSAC_pixel_threshold, RANSAC_confidence, RANSAC_inlier_ratio)
+    for i in range(len(matches_list)):
+        match_pairs_sift[i] = [src_pts[i], dst_pts[i]]
+    F = compute_f_ransac(image_1, image_2, match_pairs_sift, RANSAC_pixel_threshold, RANSAC_confidence, RANSAC_inlier_ratio)

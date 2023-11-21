@@ -166,10 +166,10 @@ def ComputeH(image_1,image_2,match_pairs,RANSAC_pixel_threshold,RANSAC_confidenc
 if __name__ == "__main__":
     np.set_printoptions(precision=4, linewidth=1024, suppress=True)
     # load the images
-    image_1 = cv.imread('image1.png')
-    image_2 = cv.imread('image2.png')
+    image_1 = cv.imread('lab3/image1.png')
+    image_2 = cv.imread('lab3/image2.png')
     # import the pairs .npz file
-    matches_dict = np.load('image1_image2_matches.npz')
+    matches_dict = np.load('lab3/image1_image2_matches.npz')
     keypoints_0 = matches_dict['keypoints0']
     keypoints_1 = matches_dict['keypoints1']
     matches = matches_dict['matches']
