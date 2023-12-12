@@ -10,65 +10,65 @@ from utils.bundle_adjustment import Parametrice_Pose, ObtainPose
 def resBundleProjection(Op, x_data, T_wc1, T_wc2, K_1, K_2, D1_k_array, D2_k_array, nPairs=2):
     """
     Input:
-        Op: vector of parameters (theta_rot, tras, x_3d)
-        x_data: list of matches for every image
-        T_wc1: pose of the first camera in the world frame (center of the pair)
-        T_wc2: pose of the second camera in the world frame (center of the pair)
-        K_1: camera calibration matrix of the first camera
-        K_2: camera calibration matrix of the second camera
-        D1_k_array: distortion coefficients of the first camera
-        D2_k_array: distortion coefficients of the second camera
+        Op: parameters to optimize
+        x_data: 2d points
+        T_wc1: camera 1 pose in the world frame
+        T_wc2: camera 2 pose in the world frame
+        K_1: camera 1 calibration matrix
+        K_2: camera 2 calibration matrix
+        D1_k_array: camera 1 distortion coefficients
+        D2_k_array: camera 2 distortion coefficients
         nPairs: number of pairs of cameras
     Output:
         res: residuals
     """
-    posStartX = 5 * (nPairs - 1)    # you pass 5 params for each pair of cameras and dont pass the first pair
-    x_3d = Op[posStartX:]     # get the 3d points
-    x_3d = x_3d.reshape([3, int(x_3d.shape[0]/3)])    # reshape the 3d points
-    x_3d = np.vstack([x_3d, np.ones([1, x_3d.shape[1]])])    # add the 1s to the 3d points
-
-    u_1_array = np.empty([3, x_3d.shape[0]])
-    u_2_array = np.empty([3, x_3d.shape[0]])
+    posStartX = 6 * (nPairs - 1)    # you pass 5 params for each pair of cameras and dont pass the first pair
+    
+    nPoints = int((Op.shape[0] - posStartX)/3)   # get the number of 3d points
+    x_3dp = Op[posStartX:].reshape((3, nPoints))    # get the 3d points
+    
+    
+    #x_3dp = x_3dp.T   # reshape the 3d points
+    x_3dp = np.vstack([x_3dp, np.ones((1, nPoints))])    # add the 1s to the 3d points
+       # transpose the 3d points
+    
+    u_1_array = np.empty([3, nPoints])
+    u_2_array = np.empty([3, nPoints])
     T_c1w = np.linalg.inv(T_wc1)    # cam left respect to center
     T_c2w = np.linalg.inv(T_wc2)    # cam right respect to center
-    for i in range(x_3d.shape[0]):
-        x_3d = x_3d[i, :]
+    for i in range(nPoints):
+        x_3d = x_3dp[:,i]                       
         x_3d_1 = T_c1w @ x_3d.T
         x_3d_2 = T_c2w @ x_3d.T
-        u_1 = kannala_forward_model(x_3d_1, K_1, D1_k_array)
+        u_1 = kannala_forward_model(x_3d_1, K_1, D1_k_array)        
         u_2 = kannala_forward_model(x_3d_2, K_2, D2_k_array)
         u_1_array[:, i] = u_1
-        u_2_array[:, i] = u_2
+        u_2_array[:, i] = u_2  
     
-
     res = []
-    for j in range(x_3d.shape[0]):
-        res.append(x_data[0, j] - u_1_array[0, j])
-        res.append(x_data[1, j] - u_1_array[1, j])
+    for j in range(nPoints):        
+        res.append(x_data[0, j] - u_1_array[0, j])        
+        res.append(x_data[1, j] - u_1_array[1, j])        
+        res.append(x_data[0, j+nPoints] - u_2_array[0, j])
+        res.append(x_data[1, j+nPoints] - u_2_array[1, j])
         
-        res.append(x_data[0, j+x_3d.shape[0]] - u_2_array[0, j])
-        res.append(x_data[1, j+x_3d.shape[0]] - u_2_array[1, j])
-    
     for i in range(nPairs-1):
-        theta_rot = Op[i*5:i*5+3]
-        tras = Op[i*5+3:i*5+5]
+        theta_rot = Op[i*6:i*6+3]
+        tras = Op[i*6+3:i*6+6]
         T_wAwB = ObtainPose(theta_rot, tras[0], tras[1])    # traslation between pair i and original pair
-        T_wA_c1B = np.linalg.inv(T_wAwB) @ T_wc1
-        T_wA_c2B = np.linalg.inv(T_wAwB) @ T_wc2
-        for j in range(x_3d.shape[0]):
-            x_3d = x_3d[j, :]
-            x_3d_1 = T_wA_c1B @ x_3d.T
-            x_3d_2 = T_wA_c2B @ x_3d.T
-            u_1 = kannala_forward_model(x_3d_1, K_1, D1_k_array)
-            u_2 = kannala_forward_model(x_3d_2, K_2, D2_k_array)
-            u_1_array[:, j] = u_1
-            u_2_array[:, j] = u_2
-
-            res.append(x_data[0, j+2*i*x_3d.shape[0]+2*x_3d.shape[0]] - u_1_array[0, j])
-            res.append(x_data[1, j+2*i*x_3d.shape[0]+2*x_3d.shape[0]] - u_1_array[1, j])
-            
-            res.append(x_data[0, j+2*i*x_3d.shape[0]+2*x_3d.shape[0]+x_3d.shape[0]] - u_2_array[0, j])
-            res.append(x_data[1, j+2*i*x_3d.shape[0]+2*x_3d.shape[0]+x_3d.shape[0]] - u_2_array[1, j])
+        T_wAwB[0:3,3] = Op[i*6+3:i*6+6]        
+        for j in range(nPoints):            
+            x_3d = x_3dp[:, j]
+            x_3d_B = T_wAwB @ x_3d.T
+            x_3d_1B = T_c1w @ x_3d_B.T           
+            x_3d_2B = T_c2w @ x_3d_B.T  
+            u_1 = kannala_forward_model(x_3d_1B, K_1, D1_k_array)
+            u_2 = kannala_forward_model(x_3d_2B, K_2, D2_k_array)
+                 
+            res.append(x_data[0, j+2*i*nPoints+2*nPoints] - u_1[0])
+            res.append(x_data[1, j+2*i*nPoints+2*nPoints] - u_1[1])            
+            res.append(x_data[0, j+2*i*nPoints+2*nPoints+nPoints] - u_2[0])
+            res.append(x_data[1, j+2*i*nPoints+2*nPoints+nPoints] - u_2[1])
     return res
 
 
@@ -164,6 +164,44 @@ def kannala_backward_model(u, K_c, D):
     v = np.array([np.sin(theta)*np.cos(phi), np.sin(theta)*np.sin(phi), np.cos(theta)])
     return v
 
+def projectPoints(x_3d,T_c1w,K_1,D1_K_array,n):
+    """
+    This function projects the 3D points to the 2D image plane.
+    Inputs:
+        x_3d: 3d points in the camera frame
+        T_c1w: camera pose in the world frame
+        K_1: camera calibration matrix
+        D1_K_array: distortion coefficients
+        n: number of points
+    Outputs:
+        u_1_op: 2d coordinates on the image
+    """
+    u_1_op = np.empty([3, n])    
+    for i in range(n):
+        x_3d_point = x_3d[:,i]        
+        x_3d_1 = T_c1w @ x_3d_point.T        
+        u_1 = kannala_forward_model(x_3d_1, K_1, D1_k_array)
+        u_1_op[:, i] = u_1 
+        
+    return u_1_op
+
+def plot2DImages(u_1,x1,image,imageName,figNum):
+    """
+    This function plots the 2D images.
+    Inputs:
+        u_1: 2d coordinates on the image
+        x1: 2d coordinates on the image
+        image: image
+        imageName: image name
+        figNum: figure number
+    """
+    fig1 = plt.figure(figNum)
+    plt.imshow(image)
+    plt.scatter(u_1[0, :], u_1[1, :], marker=".", c="r")
+    plt.scatter(x1[0, :], x1[1, :], marker=".", c="b")
+    plt.title(imageName)
+
+
 if __name__ == "__main__":
     ################################
     # import all the provided data #
@@ -220,7 +258,7 @@ if __name__ == "__main__":
     # 2.2 Implement the triangulation algorithm based on planes and compute the 3D points by triangulation for pose A #
     ###################################################################################################################
     x_3d_array = kannala_triangularization(x1, x2, K_1, K_2, D1_k_array, D2_k_array, T_leftRight, T_wc2)
-
+    npoints = x_3d_array.shape[1]
     #Plot the 3D 
     fig3D = plt.figure(1)
     ax = plt.axes(projection="3d", adjustable="box")
@@ -240,41 +278,71 @@ if __name__ == "__main__":
     
     # now plot them on the 2d images
     # point3d to 2d via forward model
-    u_1_array = np.empty([3, x_3d_array.shape[1]])
-    u_2_array = np.empty([3, x_3d_array.shape[1]])
-    x_3d_array = x_3d_array.T
     T_c1w = np.linalg.inv(T_wc1)
     T_c2w = np.linalg.inv(T_wc2)
-    for i in range(x_3d_array.shape[0]):
-        x_3d = x_3d_array[i, :]
-        x_3d_1 = T_c1w @ x_3d.T
-        x_3d_2 = T_c2w @ x_3d.T
-        u_1 = kannala_forward_model(x_3d_1, K_1, D1_k_array)
-        u_2 = kannala_forward_model(x_3d_2, K_2, D2_k_array)
-        u_1_array[:, i] = u_1
-        u_2_array[:, i] = u_2
-
-    # plot the points on the images
-    fig1 = plt.figure(2)
-    plt.imshow(fisheye1_frameA)
-    plt.scatter(u_1_array[0, :], u_1_array[1, :], marker=".", c="r")
-    plt.title("Fisheye1 FrameA")
-    fig2 = plt.figure(3)
-    plt.imshow(fisheye2_frameA)
-    plt.scatter(u_2_array[0, :], u_2_array[1, :], marker=".", c="r")
-    plt.title("Fisheye2 FrameA")
+    u_1 = projectPoints(x_3d_array,T_c1w,K_1,D1_k_array,npoints)
+    u_2 = projectPoints(x_3d_array,T_c2w,K_2,D2_k_array,npoints)
+    x_3d_optimB = np.empty([4,npoints])
+    for i in range(npoints):
+        x_3d = x_3d_array[:,i]
+        x_3d_B = T_wAwB_gt @ x_3d.T
+        x_3d_optimB [:,i]=x_3d_B
+    u_3 = projectPoints(x_3d_optimB,T_c1w,K_1,D1_k_array,npoints)
+    u_4 = projectPoints(x_3d_optimB,T_c2w,K_2,D2_k_array,npoints)
+   
+    # plot the points on the images   
+    plot2DImages(u_1,x1,fisheye1_frameA,"Fisheye1 FrameA",2) 
+    plot2DImages(u_2,x2,fisheye2_frameA,"Fisheye2 FrameA",3)
+    plot2DImages(u_3,x3,fisheye1_frameB,"Fisheye1 FrameB",4)
+    plot2DImages(u_4,x4,fisheye2_frameB,"Fisheye2 FrameB",5)
     plt.show()
 
     ##########################################################################
     # 3. Bundle adjustment using calibrated stereo with fish-eyes (optional) #
     ##########################################################################
     theta_rot, tras = Parametrice_Pose(T_wAwB_seed)
+    tras = T_wAwB_seed[0:3,3]
     #We make the Op list
     Op = np.hstack([np.array(theta_rot).flatten(), np.array(tras).flatten(), x_3d_array[0:3,:].flatten()])
-    x_data = np.hstack([x1, x2, x3, x4])
-
+    x_data = np.hstack([x1, x2, x3, x4])    
+    
     OpOptim = scOptim.least_squares(resBundleProjection, Op, args=(x_data, T_wc1, T_wc2, K_1, K_2, D1_k_array, D2_k_array, 2))
-
     T_wAwB_optim = ObtainPose(OpOptim.x[0:3], OpOptim.x[3], OpOptim.x[4])
-    print("T_wAwB_optim: ", T_wAwB_optim)
-    print("T_wAwB_gt: ", T_wAwB_gt)
+    T_wAwB_optim[0:3,3] = OpOptim.x[3:6]
+    x_3d_optim = OpOptim.x[6:].reshape((3, int(OpOptim.x[6:].shape[0]/3)))
+    x_3d_optim = np.vstack([x_3d_optim, np.ones((1, x_3d_optim.shape[1]))])
+    
+    
+    u_1_op = projectPoints(x_3d_optim,T_c1w,K_1,D1_k_array,npoints)
+    u_2_op = projectPoints(x_3d_optim,T_c2w,K_2,D2_k_array,npoints)
+    x_3d_optimB = np.empty([4, npoints])
+    for i in range(npoints):
+        x_3d = x_3d_optim[:,i]
+        x_3d_B = T_wAwB_optim @ x_3d.T
+        x_3d_optimB [:,i]=x_3d_B
+    u_3_op = projectPoints(x_3d_optimB,T_c1w,K_1,D1_k_array,npoints)
+    u_4_op = projectPoints(x_3d_optimB,T_c2w,K_2,D2_k_array,npoints)   
+    
+    plot2DImages(u_1_op,x1,fisheye1_frameA,"Fisheye1 FrameA",6)
+    plot2DImages(u_2_op,x2,fisheye2_frameA,"Fisheye2 FrameA",7)
+    plot2DImages(u_3_op,x3,fisheye1_frameB,"Fisheye1 FrameB",8)
+    plot2DImages(u_4_op,x4,fisheye2_frameB,"Fisheye2 FrameB",9)   
+
+    
+    fig3D = plt.figure(10)
+    ax = plt.axes(projection="3d", adjustable="box")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    drawRefSystem(ax, T_wc1, "-", "LA")    
+    drawRefSystem(ax, T_wc2, "-", "RA")  
+    drawRefSystem(ax, T_wAwB_optim@T_wc1, "-", "LB")
+    drawRefSystem(ax, T_wAwB_optim@T_wc2, "-", "RB") 
+    ax.scatter(x_3d_optim[0, :], x_3d_optim[1, :], x_3d_optim[2, :], marker=".")    
+    # Matplotlib does not correctly manage the axis('equal')
+    xFakeBoundingBox = np.linspace(0, 4, 2)
+    yFakeBoundingBox = np.linspace(0, 4, 2)
+    zFakeBoundingBox = np.linspace(0, 4, 2)
+    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, "w.")
+    print('Click in the image to continue...')
+    plt.show()
