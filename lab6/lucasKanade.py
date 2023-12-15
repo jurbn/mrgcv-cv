@@ -7,14 +7,38 @@ import cv2 as cv
 
 from NCCTemplate import seed_estimation_NCC_single_point
 
-def lucas_kanade(og_flow):
+def lucas_kanade(img0_gray, img1_gray, og_flow: np.array, points_selected: np.array, patch_half_size: int = 5):
     epsilon = 0.01
     u = og_flow
     u_increment = np.ones(u[0].shape)
+    i0 = np.zeros((points_selected.shape[0]))   # THERE ARE THE PATCHES 0 ON IMAGE 1
+    for i in range(0, points_selected.shape[0]):
+        point = points_selected[i]
+        patch = img1_gray[point[0] - patch_half_size:point[0] + patch_half_size + 1,
+                    point[1] - patch_half_size:point[1] + patch_half_size + 1 ]
+        i0 = np.vstack((i0, patch))
+    i1 = np.zeros((points_selected.shape[0]))
     while (np.sqrt(np.sum(u_increment ** 2))) >= epsilon:
         # 1. from current motion u, compute i1(xi+u)
+        # this is the warped patch 0 on image 1, use linear interpolation for this warping
+        for i in range(0, points_selected.shape[0]):
+            patch = i0[i]
+            flow = u[i]
+            # warp the patch to the new point
+            patch = cv.remap(img1_gray, patch, flow, cv.INTER_LINEAR)   #FIXME: check if this is correct
+            i1 = np.vstack((i1, patch))
         # 2. compute the error between patches (ei = i1(xi+u)-i0(xi)=it)
-        # 3. compu
+        error = i1 - img0_gray
+        # 3. compute  the vector b from the error between patches and the gradients
+        b = np.zeros((points_selected.shape[0]))
+        for i in range(0, points_selected.shape[0]):
+            point = points_selected[i]
+            patch = error[point[0] - patch_half_size:point[0] + patch_half_size + 1,
+                    point[1] - patch_half_size:point[1] + patch_half_size + 1]
+            b = np.vstack((b, patch))
+        # 4. solve A delta u = b
+        # 5. update u = u + delta u
+        # 6. repeat until delta u is small enough
 
 
 def read_image(filename: str, ):
